@@ -7,8 +7,14 @@ import UnifiedSleekChat from "./components/AIPathwaysChat/UnifiedSleekChat";
 // import LanguageSelection, { Language } from "./components/LanguageSelection";
 import { Language } from "./components/LanguageSelection";
 
+// Captures info gathered during onboarding (can expand later).
+type UserProfile = {
+  status: "high-school" | "community-college" | "undergrad" | "other";
+  goals?: string;
+};
+
 export default function MainPage() {
-  const [currentView, setCurrentView] = useState<"home" | "language" | "chat">(
+  const [currentView, setCurrentView] = useState<"home" | "onboarding" | "language" | "chat">(
     "home"
   );
   const [selectedLanguage] = useState<Language | null>({
@@ -18,6 +24,8 @@ export default function MainPage() {
     greeting: "Hello! Let's explore your educational journey.",
     description: "Standard English conversation",
   }); // Auto-set to English
+  // reserve space for onboarding answers
+  const [, setUserProfile] = useState<UserProfile | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -25,9 +33,17 @@ export default function MainPage() {
   }, []);
 
   const handleStartChat = () => {
+    setCurrentView("onboarding");
+
     // Skip language selection and go directly to chat
-    setCurrentView("chat");
+    // setCurrentView("chat");
     // setCurrentView("language");
+  };
+
+  // Placeholder completion handler so chat can still open.
+  const handleOnboardingComplete = (profile: UserProfile) => {
+    setUserProfile(profile);
+    setCurrentView("chat");
   };
 
   // const handleLanguageSelect = (language: Language) => {
@@ -49,8 +65,35 @@ export default function MainPage() {
   //   );
   // }
 
+  if (currentView === "onboarding") {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
+        <div className="rounded-3xl bg-white shadow-2xl px-12 py-10 text-center space-y-4">
+          <p className="text-lg font-semibold text-slate-800">
+            Onboarding flow coming soon
+          </p>
+          <button
+            className="px-6 py-3 rounded-full bg-emerald-500 text-white"
+            onClick={() =>
+              handleOnboardingComplete({ status: "high-school", goals: "" })
+            }
+          >
+            Continue to chat
+          </button>
+          <button
+            className="text-sm text-slate-500 underline"
+            onClick={() => setCurrentView("home")}
+          >
+            Back to home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (currentView === "chat") {
-    return <UnifiedSleekChat selectedLanguage={selectedLanguage} />;
+    return <UnifiedSleekChat 
+    selectedLanguage={selectedLanguage} />;
   }
 
   return (
