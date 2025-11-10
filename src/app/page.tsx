@@ -65,7 +65,7 @@ export default function MainPage() {
       <div className="absolute top-8 left-8">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-900">
-            Kamaʻāina Pathways
+            UH Pathways
           </span>
         </div>
       </div>
