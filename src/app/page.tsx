@@ -29,17 +29,31 @@ export default function MainPage() {
   // reserve space for onboarding answers
   const [, setUserProfile] = useState<UserProfile | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isLeavingHome, setIsLeavingHome] = useState(false);
+  const [nextView, setNextView] = useState<"home" | "onboarding" | "language" | "chat" | null>(
+    null
+  );
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
 
-  const handleStartChat = () => {
-    setCurrentView("onboarding");
+  useEffect(() => {
+    if (!isLeavingHome || !nextView) return;
 
-    // Skip language selection and go directly to chat
-    // setCurrentView("chat");
-    // setCurrentView("language");
+    const timeout = setTimeout(() => {
+      setCurrentView(nextView);
+      setIsLeavingHome(false);
+      setNextView(null);
+    }, 450);
+
+    return () => clearTimeout(timeout);
+  }, [isLeavingHome, nextView]);
+
+  const handleStartChat = () => {
+    if (currentView !== "home" || isLeavingHome) return;
+    setNextView("chat");
+    setIsLeavingHome(true);
   };
 
   // Placeholder completion handler so chat can still open.
@@ -77,13 +91,18 @@ export default function MainPage() {
   }
 
   if (currentView === "chat") {
-    return <UnifiedSleekChat 
-    selectedLanguage={selectedLanguage} />;
+    return (
+      <div className="min-h-screen bg-black fade-in">
+        <UnifiedSleekChat selectedLanguage={selectedLanguage} />
+      </div>
+    );
   }
 
   return (
     <div
-      className="relative h-screen w-screen bg-emerald-900 flex items-center justify-center overflow-hidden"
+      className={`relative h-screen w-screen bg-emerald-900 flex items-center justify-center overflow-hidden transition-all duration-500 ${
+        isLeavingHome ? "opacity-0 translate-y-4 scale-95" : "opacity-100 translate-y-0"
+      }`}
       style={{
         fontFamily:
           '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
