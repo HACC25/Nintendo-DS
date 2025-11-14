@@ -3,7 +3,7 @@
 // src/app/components/AIPathwaysChat/MarketIntelligenceReport.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TrendingUp, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -23,7 +23,8 @@ export default function MarketIntelligenceReport({ socCodes, messages, userProfi
   const [lastGeneratedKey, setLastGeneratedKey] = useState<string>('');
   
   // Create stable string representation for comparison
-  const socCodesKey = socCodes.sort().join(',');
+  const normalizedSocCodes = useMemo(() => [...socCodes].sort(), [socCodes]);
+  const socCodesKey = normalizedSocCodes.join(',');
   // ✅ DON'T use messages.length - it changes on every message!
   // Market intelligence should ONLY regenerate when SOC codes change, not on every chat message
   
@@ -34,9 +35,19 @@ export default function MarketIntelligenceReport({ socCodes, messages, userProfi
     educationLevel: userProfile.extracted?.educationLevel,
   }) : '';
   const currentKey = `${socCodesKey}-${userProfileKey}`; // ✅ Removed messagesKey!
+  const messagesRef = useRef(messages);
+  const userProfileRef = useRef(userProfile);
 
   useEffect(() => {
-    if (socCodes.length === 0) {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    userProfileRef.current = userProfile;
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (normalizedSocCodes.length === 0) {
       setLoading(false);
       setReport('');
       setLastGeneratedKey('');
@@ -50,7 +61,7 @@ export default function MarketIntelligenceReport({ socCodes, messages, userProfi
     }
     
     console.log('[MarketReport] 🔄 Regenerating report due to dependency change');
-    console.log('[MarketReport] 📊 SOC codes:', socCodes);
+    console.log('[MarketReport] 📊 SOC codes:', normalizedSocCodes);
     console.log('[MarketReport] 👤 Profile key:', userProfileKey);
 
     async function generateReport() {
@@ -60,18 +71,21 @@ export default function MarketIntelligenceReport({ socCodes, messages, userProfi
       setError(null);
 
       try {
-        console.log('[MarketReport] 📊 Requesting report for SOC codes:', socCodes);
-        console.log('[MarketReport] 💬 Conversation context:', messages?.length || 0, 'messages');
-        console.log('[MarketReport] 👤 User profile:', userProfile);
+        const latestMessages = messagesRef.current;
+        const latestProfile = userProfileRef.current;
+
+        console.log('[MarketReport] 📊 Requesting report for SOC codes:', normalizedSocCodes);
+        console.log('[MarketReport] 💬 Conversation context:', latestMessages?.length || 0, 'messages');
+        console.log('[MarketReport] 👤 User profile:', latestProfile);
         
         // Call server-side API route
         const response = await fetch('/api/market-intelligence', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            socCodes, 
-            conversationContext: messages,
-            userProfile 
+            socCodes: normalizedSocCodes, 
+            conversationContext: latestMessages,
+            userProfile: latestProfile 
           }),
         });
 
@@ -100,7 +114,7 @@ export default function MarketIntelligenceReport({ socCodes, messages, userProfi
     }
 
     generateReport();
-  }, [socCodesKey, userProfileKey, currentKey, lastGeneratedKey]); // ✅ Only SOC codes and profile - NOT messages!
+  }, [socCodesKey, userProfileKey, currentKey, lastGeneratedKey, normalizedSocCodes]); // ✅ Only SOC codes/profile changes trigger rerun
 
   if (loading) {
     return (
@@ -126,7 +140,7 @@ export default function MarketIntelligenceReport({ socCodes, messages, userProfi
     );
   }
 
-  if (socCodes.length === 0) {
+  if (normalizedSocCodes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-12 text-gray-500">
         <TrendingUp className="w-12 h-12 mb-4 text-gray-300" />

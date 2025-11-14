@@ -243,6 +243,3 @@ IMPORTANT:
   }
 }
 
-export default {
-  updateComprehensiveProfile,
-};

@@ -4,9 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { processUserQuery } from "@/app/lib/agents/orchestrator-agents";
 import { processUserQueryWithLangGraphStyle } from "@/app/lib/agents/langgraph-style-orchestrator";
 import Tools from "@/app/lib/tools/jsonl-tools";
-import {
-  formatCollegeProgramsForFrontend,
-} from "@/app/lib/helpers/pathway-aggregator";
+import { formatCollegeProgramsForFrontend } from "@/app/lib/helpers/pathway-aggregator";
 import { CacheService } from "@/app/lib/cache/cache-service";
 
 // Feature flag for LangGraph-style orchestrator
@@ -28,8 +26,13 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { message, conversationHistory = [], profile = null, userProfile = null } = body;
-    
+    const {
+      message,
+      conversationHistory = [],
+      profile = null,
+      userProfile = null,
+    } = body;
+
     // Use whichever profile structure was sent (frontend sends userProfile, some may send profile)
     const receivedProfile = userProfile || profile;
 
@@ -56,20 +59,37 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[Pathway API] Processing query: "${message}"`);
-    console.log(`[Pathway API] RAW profile received:`, JSON.stringify(receivedProfile, null, 2));
-    console.log(`[Pathway API] Profile keys:`, receivedProfile ? Object.keys(receivedProfile) : 'null');
-    console.log(`[Pathway API] Profile.extracted exists?`, receivedProfile?.extracted ? 'YES' : 'NO');
-    console.log(`[Pathway API] Profile.extracted content:`, JSON.stringify(receivedProfile?.extracted, null, 2));
+    console.log(
+      `[Pathway API] RAW profile received:`,
+      JSON.stringify(receivedProfile, null, 2)
+    );
+    console.log(
+      `[Pathway API] Profile keys:`,
+      receivedProfile ? Object.keys(receivedProfile) : "null"
+    );
+    console.log(
+      `[Pathway API] Profile.extracted exists?`,
+      receivedProfile?.extracted ? "YES" : "NO"
+    );
+    console.log(
+      `[Pathway API] Profile.extracted content:`,
+      JSON.stringify(receivedProfile?.extracted, null, 2)
+    );
 
     // Transform profile structure for orchestrator
     // Frontend might send various structures - try all possibilities
     let transformedProfile;
-    
+
     if (receivedProfile?.extracted) {
       // Case 1: profile.extracted exists (most likely from frontend)
       console.log(`[Pathway API] Using profile.extracted structure`);
       transformedProfile = receivedProfile.extracted;
-    } else if (receivedProfile?.interests || receivedProfile?.careerGoals || receivedProfile?.educationLevel || receivedProfile?.location) {
+    } else if (
+      receivedProfile?.interests ||
+      receivedProfile?.careerGoals ||
+      receivedProfile?.educationLevel ||
+      receivedProfile?.location
+    ) {
       // Case 2: profile is already in the correct format
       console.log(`[Pathway API] Profile already in correct format`);
       transformedProfile = receivedProfile;
@@ -84,7 +104,10 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    console.log(`[Pathway API] Transformed profile for orchestrator:`, JSON.stringify(transformedProfile, null, 2));
+    console.log(
+      `[Pathway API] Transformed profile for orchestrator:`,
+      JSON.stringify(transformedProfile, null, 2)
+    );
 
     // Extract last conversation context for cache key (last 2 messages)
     const recentContext = conversationHistory
@@ -119,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     // Process the query using the orchestrator (includes verification AND aggregation)
     // Pass the TRANSFORMED profile (not the raw frontend profile)
-    
+
     // FEATURE FLAG: Choose orchestrator version
     let result;
     if (USE_LANGGRAPH_STYLE) {
@@ -170,12 +193,14 @@ export async function POST(request: NextRequest) {
       message: result.response,
       data: {
         // High school programs with course details (already aggregated)
-        highSchoolPrograms: (result.data.highSchoolPrograms || []).map((prog: any) => ({
-          name: prog.name,
-          schools: prog.schools || [],
-          schoolCount: prog.schoolCount || (prog.schools || []).length,
-          details: prog.details, // Includes coursesByGrade and coursesByLevel
-        })),
+        highSchoolPrograms: (result.data.highSchoolPrograms || []).map(
+          (prog: any) => ({
+            name: prog.name,
+            schools: prog.schools || [],
+            schoolCount: prog.schoolCount || (prog.schools || []).length,
+            details: prog.details, // Includes coursesByGrade and coursesByLevel
+          })
+        ),
         // College programs grouped by CIP with variants (formatted for display)
         collegePrograms: formattedCollegePrograms.map((prog: any) => ({
           name: prog.name,
@@ -189,11 +214,15 @@ export async function POST(request: NextRequest) {
           cipCode: career.CIP_CODE || career.cipCode || "",
           socCodes: career.SOC_CODE || career.socCodes || [],
           title:
-            career.SOC_TITLE || career.title || career.SOC_CODE?.[0] || "Career Opportunity",
+            career.SOC_TITLE ||
+            career.title ||
+            career.SOC_CODE?.[0] ||
+            "Career Opportunity",
         })),
         // Updated summary with accurate counts (from aggregated data)
         summary: {
-          totalHighSchoolPrograms: (result.data.highSchoolPrograms || []).length,
+          totalHighSchoolPrograms: (result.data.highSchoolPrograms || [])
+            .length,
           totalHighSchools: uniqueHighSchools.size,
           totalCollegePrograms: (result.data.collegePrograms || []).length,
           totalCollegeCampuses: uniqueCollegeCampuses.size,
