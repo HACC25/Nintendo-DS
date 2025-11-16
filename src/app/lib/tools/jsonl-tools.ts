@@ -2,6 +2,7 @@
 // src/app/lib/tools/jsonl-tools.ts
 import { getJSONLReader } from "@/app/lib/tools/jsonl-reader";
 import { DirectSearchTracer } from "./direct-search-tracer";
+import manoaCourses from "@/app/lib/data/json_format/manoa_courses.json";
 
 /**
  * ENHANCED JSONL PARSING TOOLS WITH COMPLETE RELATIONSHIP TRACING
@@ -185,6 +186,26 @@ export class CollegeDataTool {
     return await this.reader.readFile("cip_to_program_mapping.jsonl");
   }
 
+  /**
+   * Load UH Manoa Courses from local JSON
+   */
+  async getUHManoaCourses(): Promise<any[]> {
+    return manoaCourses as any[];
+  }
+  /**
+   * Search UH Manoa Courses by keywords
+   */
+  async searchUHManoaCourses(keywords: string): Promise<any[]> {
+    const all = await this.getUHManoaCourses();
+    return all.filter(
+      (c: any) =>
+        c.course_title?.toLowerCase().includes(keywords.toLowerCase()) ||
+        c.course_prefix?.toLowerCase().includes(keywords.toLowerCase()) ||
+        c.course_number?.toLowerCase().includes(keywords.toLowerCase()) ||
+        c.dept_name?.toLowerCase().includes(keywords.toLowerCase())
+    );
+  }
+
   async getProgramsByCIP(cipCodes: string[]): Promise<CollegeProgram[]> {
     const allPrograms = await this.getAllPrograms();
     return allPrograms.filter(p => cipCodes.includes(p.CIP_CODE));
@@ -347,7 +368,9 @@ export class CareerDataTool {
 
   async getSOCCodesByCIP(cipCodes: string[]): Promise<CareerMapping[]> {
     const mappings = await this.reader.readFile("cip_to_soc_mapping.jsonl");
-    return mappings.filter((m: { CIP_CODE: string; }) => cipCodes.includes(m.CIP_CODE));
+    return mappings.filter((m: { CIP_CODE: string }) =>
+      cipCodes.includes(m.CIP_CODE)
+    );
   }
 
   async getAllSOCCodes(cipCodes: string[]): Promise<string[]> {
@@ -490,6 +513,20 @@ export class PathwayTracer {
     return await this.directSearchTracer.traceFromHighSchool(programName);
   }
 }
+
+/**
+ * Test UH Manoa Course Search
+ */
+(async () => {
+  const collegeTool = new CollegeDataTool();
+
+  const testKeywords = ["ICS", "CINE", "ACCOUNTING", "DATA", "CINEMA"];
+  for (const keyword of testKeywords) {
+    const results = await collegeTool.searchUHManoaCourses(keyword);
+    console.log(`\nSearch results for "${keyword}" total:`, results.length);
+    console.log(`Search results for "${keyword}":`, results.slice(0, 3)); // Show top 3 results
+  }
+})();
 
 /**
  * Export all tools for easy access

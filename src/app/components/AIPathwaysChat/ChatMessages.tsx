@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Message, UserProfile } from "./types";
+import { PROGRAM_PREFIX_MAP } from "@/app/lib/helpers/program-course-prefix";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -42,6 +43,17 @@ interface ProgramDetails {
   };
 }
 
+interface CollegeCourse {
+  course_prefix?: string;
+  course_number?: string;
+  course_title?: string;
+  num_units?: string;
+  dept_name?: string;
+  campus?: string;
+  course_desc?: string;
+  metadata?: string;
+}
+
 interface PathwayData {
   highSchoolPrograms?: Array<{
     name: string;
@@ -69,6 +81,12 @@ interface PathwayData {
   };
 }
 
+interface CampusCourseState {
+  loading: boolean;
+  error: string | null;
+  courses: CollegeCourse[];
+}
+
 const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
   content,
   className = "",
@@ -76,7 +94,7 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
   const parseMarkdown = (text: string): React.ReactNode => {
     const lines = text.split("\n");
     const elements: React.ReactNode[] = [];
-    let currentList: { type: 'ul' | 'ol', items: string[] } | null = null;
+    let currentList: { type: "ul" | "ol"; items: string[] } | null = null;
     let lineIndex = 0;
 
     const processInlineMarkdown = (text: string): React.ReactNode => {
@@ -98,7 +116,10 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
         if (matchedText.startsWith("**") && matchedText.endsWith("**")) {
           // Bold
           parts.push(
-            <strong key={`bold-${key++}`} className="font-semibold text-slate-900">
+            <strong
+              key={`bold-${key++}`}
+              className="font-semibold text-slate-900"
+            >
               {matchedText.slice(2, -2)}
             </strong>
           );
@@ -112,7 +133,10 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
         } else if (matchedText.startsWith("`") && matchedText.endsWith("`")) {
           // Inline code
           parts.push(
-            <code key={`code-${key++}`} className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded text-sm font-mono">
+            <code
+              key={`code-${key++}`}
+              className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded text-sm font-mono"
+            >
               {matchedText.slice(1, -1)}
             </code>
           );
@@ -131,16 +155,14 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
 
     const flushList = () => {
       if (currentList && currentList.items.length > 0) {
-        const ListTag = currentList.type === 'ol' ? 'ol' : 'ul';
-        const listClassName = currentList.type === 'ol' 
-          ? "ml-5 mt-3 mb-3 space-y-2 list-decimal list-outside"
-          : "ml-5 mt-3 mb-3 space-y-2 list-disc list-outside";
-        
+        const ListTag = currentList.type === "ol" ? "ol" : "ul";
+        const listClassName =
+          currentList.type === "ol"
+            ? "ml-5 mt-3 mb-3 space-y-2 list-decimal list-outside"
+            : "ml-5 mt-3 mb-3 space-y-2 list-disc list-outside";
+
         elements.push(
-          <ListTag
-            key={`list-${elements.length}`}
-            className={listClassName}
-          >
+          <ListTag key={`list-${elements.length}`} className={listClassName}>
             {currentList.items.map((item, i) => (
               <li key={i} className="pl-1.5 text-slate-700 leading-relaxed">
                 {processInlineMarkdown(item)}
@@ -160,44 +182,69 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
       if (trimmed.match(/^#{1,6}\s+/)) {
         flushList();
         const level = trimmed.match(/^#{1,6}/)?.[0].length || 2;
-        const headerText = trimmed.replace(/^#{1,6}\s+/, '');
-        
-        const headerClasses = {
-          1: "text-2xl font-bold text-slate-900 mt-6 mb-4",
-          2: "text-xl font-bold text-slate-900 mt-5 mb-3",
-          3: "text-lg font-semibold text-slate-900 mt-4 mb-2",
-          4: "text-base font-semibold text-slate-800 mt-3 mb-2",
-          5: "text-sm font-semibold text-slate-800 mt-3 mb-2",
-          6: "text-sm font-semibold text-slate-700 mt-2 mb-1",
-        }[level] || "text-lg font-semibold text-slate-900 mt-4 mb-2";
+        const headerText = trimmed.replace(/^#{1,6}\s+/, "");
+
+        const headerClasses =
+          {
+            1: "text-2xl font-bold text-slate-900 mt-6 mb-4",
+            2: "text-xl font-bold text-slate-900 mt-5 mb-3",
+            3: "text-lg font-semibold text-slate-900 mt-4 mb-2",
+            4: "text-base font-semibold text-slate-800 mt-3 mb-2",
+            5: "text-sm font-semibold text-slate-800 mt-3 mb-2",
+            6: "text-sm font-semibold text-slate-700 mt-2 mb-1",
+          }[level] || "text-lg font-semibold text-slate-900 mt-4 mb-2";
 
         const headerContent = processInlineMarkdown(headerText);
 
         // Render appropriate header level
         if (level === 1) {
-          elements.push(<h1 key={`header-${lineIndex}`} className={headerClasses}>{headerContent}</h1>);
+          elements.push(
+            <h1 key={`header-${lineIndex}`} className={headerClasses}>
+              {headerContent}
+            </h1>
+          );
         } else if (level === 2) {
-          elements.push(<h2 key={`header-${lineIndex}`} className={headerClasses}>{headerContent}</h2>);
+          elements.push(
+            <h2 key={`header-${lineIndex}`} className={headerClasses}>
+              {headerContent}
+            </h2>
+          );
         } else if (level === 3) {
-          elements.push(<h3 key={`header-${lineIndex}`} className={headerClasses}>{headerContent}</h3>);
+          elements.push(
+            <h3 key={`header-${lineIndex}`} className={headerClasses}>
+              {headerContent}
+            </h3>
+          );
         } else if (level === 4) {
-          elements.push(<h4 key={`header-${lineIndex}`} className={headerClasses}>{headerContent}</h4>);
+          elements.push(
+            <h4 key={`header-${lineIndex}`} className={headerClasses}>
+              {headerContent}
+            </h4>
+          );
         } else if (level === 5) {
-          elements.push(<h5 key={`header-${lineIndex}`} className={headerClasses}>{headerContent}</h5>);
+          elements.push(
+            <h5 key={`header-${lineIndex}`} className={headerClasses}>
+              {headerContent}
+            </h5>
+          );
         } else {
-          elements.push(<h6 key={`header-${lineIndex}`} className={headerClasses}>{headerContent}</h6>);
+          elements.push(
+            <h6 key={`header-${lineIndex}`} className={headerClasses}>
+              {headerContent}
+            </h6>
+          );
         }
-        
+
         lineIndex++;
         continue;
       }
 
       // Unordered list (- item or * item)
       if (trimmed.match(/^[-*]\s+/)) {
-        const itemText = trimmed.replace(/^[-*]\s+/, '');
-        if (!currentList || currentList.type !== 'ul') {
+        const itemText = trimmed.replace(/^[-*]\s+/, "");
+        if (!currentList || currentList.type !== "ul") {
           flushList();
-          currentList = { type: 'ul', items: [] };
+          currentList = { type: "ul", items: [] };
         }
         currentList.items.push(itemText);
         lineIndex++;
@@ -206,10 +253,10 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
 
       // Ordered list (1. item)
       if (trimmed.match(/^\d+\.\s+/)) {
-        const itemText = trimmed.replace(/^\d+\.\s+/, '');
-        if (!currentList || currentList.type !== 'ol') {
+        const itemText = trimmed.replace(/^\d+\.\s+/, "");
+        if (!currentList || currentList.type !== "ol") {
           flushList();
-          currentList = { type: 'ol', items: [] };
+          currentList = { type: "ol", items: [] };
         }
         currentList.items.push(itemText);
         lineIndex++;
@@ -217,7 +264,7 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
       }
 
       // Empty line
-      if (trimmed === '') {
+      if (trimmed === "") {
         flushList();
         lineIndex++;
         continue;
@@ -226,7 +273,10 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
       // Regular paragraph
       flushList();
       elements.push(
-        <p key={`p-${lineIndex}`} className="mb-3 last:mb-0 text-slate-700 leading-relaxed">
+        <p
+          key={`p-${lineIndex}`}
+          className="mb-3 last:mb-0 text-slate-700 leading-relaxed"
+        >
           {processInlineMarkdown(line)}
         </p>
       );
@@ -253,6 +303,15 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
   const [expandedCollegeVariants, setExpandedCollegeVariants] = useState<
     Set<string>
   >(new Set());
+  const [expandedCourseLists, setExpandedCourseLists] = useState<Set<string>>(
+    new Set()
+  );
+  const [campusCourseLists, setCampusCourseLists] = useState<
+    Record<string, Record<string, CampusCourseState>>
+  >({});
+  const [expandedCampusCourseLists, setExpandedCampusCourseLists] = useState<
+    Record<string, Set<string>>
+  >({});
 
   const toggleProgramExpanded = (programName: string) => {
     setExpandedPrograms(prev => {
@@ -276,6 +335,310 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
       }
       return newSet;
     });
+  };
+
+  const fetchCoursesForCampus = async (
+    programName: string,
+    campus: string,
+    variants?: string[]
+  ) => {
+    setCampusCourseLists(prev => ({
+      ...prev,
+      [programName]: {
+        ...(prev[programName] || {}),
+        [campus]: {
+          loading: true,
+          error: null,
+          courses: prev[programName]?.[campus]?.courses || [],
+        },
+      },
+    }));
+
+    const buildSearchKeywords = () => {
+      const keywordSet = new Set<string>();
+      const deptKeywordSet = new Set<string>();
+
+      const sanitize = (value: string) =>
+        value
+          .replace(/\(.*?\)/g, "")
+          .replace(/-/g, " ")
+          .trim();
+
+      const addProgramKeyword = (value?: string) => {
+        if (!value) return;
+        const cleaned = sanitize(value).toLowerCase();
+        if (cleaned.length >= 3) {
+          keywordSet.add(cleaned);
+          deptKeywordSet.add(cleaned);
+        }
+      };
+
+      addProgramKeyword(programName);
+      variants?.forEach(addProgramKeyword);
+
+      const normalizedProgram = sanitize(programName).toLowerCase();
+      const variantMatches =
+        variants
+          ?.map(variant => sanitize(variant).toLowerCase())
+          .filter(Boolean) || [];
+
+      Object.entries(PROGRAM_PREFIX_MAP).forEach(([key, prefixes]) => {
+        const matchKey = key.toLowerCase();
+        const matchesProgram =
+          normalizedProgram.includes(matchKey) ||
+          variantMatches.some(variant => variant.includes(matchKey));
+
+        if (matchesProgram) {
+          prefixes.forEach(prefix => {
+            if (prefix?.length) {
+              keywordSet.add(prefix.toLowerCase());
+            }
+          });
+        }
+      });
+
+      const keywords = Array.from(keywordSet).slice(0, 8);
+      const deptKeywords = Array.from(deptKeywordSet).slice(0, 5);
+
+      return { keywords, deptKeywords };
+    };
+
+    const { keywords, deptKeywords } = buildSearchKeywords();
+    const primaryKeyword =
+      keywords.find(Boolean) || programName.toLowerCase().trim() || programName;
+    const keywordExtras = keywords.filter(
+      keyword => keyword && keyword !== primaryKeyword
+    );
+
+    try {
+      const params = new URLSearchParams();
+      params.set("q", primaryKeyword);
+      params.set("limit", "100");
+      params.append("campus", campus);
+      keywordExtras.forEach(keyword => params.append("keyword", keyword));
+      deptKeywords.forEach(dept => params.append("dept", dept));
+
+      const response = await fetch(
+        `/api/programs-courses?${params.toString()}`
+      );
+      if (!response.ok) {
+        throw new Error(
+          "Unable to load course data. Please try again shortly."
+        );
+      }
+
+      const data = await response.json();
+
+      setCampusCourseLists(prev => ({
+        ...prev,
+        [programName]: {
+          ...(prev[programName] || {}),
+          [campus]: {
+            loading: false,
+            error: null,
+            courses: Array.isArray(data.results) ? data.results : [],
+          },
+        },
+      }));
+    } catch (error) {
+      setCampusCourseLists(prev => ({
+        ...prev,
+        [programName]: {
+          ...(prev[programName] || {}),
+          [campus]: {
+            loading: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "An unknown error occurred.",
+            courses: [],
+          },
+        },
+      }));
+    }
+  };
+
+  const toggleCampusCourseList = (
+    programName: string,
+    campus: string,
+    variants?: string[]
+  ) => {
+    const isCurrentlyExpanded =
+      expandedCampusCourseLists[programName]?.has(campus) ?? false;
+
+    if (!isCurrentlyExpanded && !campusCourseLists[programName]?.[campus]) {
+      fetchCoursesForCampus(programName, campus, variants);
+    }
+
+    setExpandedCampusCourseLists(prev => {
+      const next = { ...prev };
+      const currentSet = new Set(prev[programName] ?? []);
+
+      if (currentSet.has(campus)) {
+        currentSet.delete(campus);
+      } else {
+        currentSet.add(campus);
+      }
+
+      next[programName] = currentSet;
+      return next;
+    });
+  };
+
+  const toggleCourseList = (programName: string) => {
+    setExpandedCourseLists(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(programName)) {
+        newSet.delete(programName);
+      } else {
+        newSet.add(programName);
+      }
+      return newSet;
+    });
+  };
+
+  const formatCourseCountLabel = (count?: number) => {
+    if (!count) return "View courses";
+    return count + " course" + (count !== 1 ? "s" : "");
+  };
+
+  const renderCourseList = (
+    programName: string,
+    campuses: string[],
+    variants?: string[]
+  ) => {
+    return (
+      <div className="mt-3 space-y-3">
+        <p className="text-xs text-slate-500">
+          Select a campus to see course offerings for this program.
+        </p>
+        <div className="space-y-2">
+          {campuses.map(campus => {
+            const isExpanded =
+              expandedCampusCourseLists[programName]?.has(campus) ?? false;
+            const campusState = campusCourseLists[programName]?.[campus];
+
+            return (
+              <div
+                key={campus}
+                className="border border-slate-200 rounded-lg overflow-hidden bg-white"
+              >
+                <button
+                  onClick={() =>
+                    toggleCampusCourseList(programName, campus, variants)
+                  }
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <span>{campus}</span>
+                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                    {formatCourseCountLabel(campusState?.courses?.length)}
+                    <ChevronRight
+                      className={
+                        "w-3.5 h-3.5 transition-transform " +
+                        (isExpanded ? "rotate-90" : "")
+                      }
+                    />
+                  </span>
+                </button>
+                {isExpanded && (
+                  <div className="px-3 pb-3">
+                    {renderCampusCourses(programName, campus, variants)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCampusCourses = (
+    programName: string,
+    campus: string,
+    variants?: string[]
+  ) => {
+    const state = campusCourseLists[programName]?.[campus];
+
+    if (!state || state.loading) {
+      return (
+        <p className="text-xs text-slate-500 mt-2">
+          Loading course information...
+        </p>
+      );
+    }
+
+    if (state.error) {
+      return (
+        <div className="mt-2 text-xs text-red-600 space-y-2">
+          <p>{state.error}</p>
+          <button
+            onClick={() => fetchCoursesForCampus(programName, campus, variants)}
+            className="text-red-700 underline decoration-dotted hover:text-red-900 transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
+    if (!state.courses.length) {
+      return (
+        <p className="text-xs text-slate-500 mt-2">
+          No courses directly related to this program were found on this campus.
+        </p>
+      );
+    }
+
+    const formatUnits = (units?: string) => {
+      if (!units) return null;
+      if (units.toLowerCase() === "v") return "Variable credits";
+      return units + " credits";
+    };
+
+    return (
+      <div className="mt-2 space-y-2">
+        {state.courses.map((course, idx) => {
+          const courseId = [course.course_prefix, course.course_number]
+            .filter(Boolean)
+            .join(" ");
+          const unitsLabel = formatUnits(course.num_units);
+          const courseKey = (courseId || "course") + "-" + idx;
+
+          return (
+            <div
+              key={courseKey}
+              className="bg-red-50 border border-red-100 rounded-md px-3 py-2 space-y-1"
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold text-slate-900">
+                  {course.course_title || courseId || "Course"}
+                </div>
+                {courseId && (
+                  <span className="text-[11px] font-mono text-red-600">
+                    {courseId}
+                  </span>
+                )}
+              </div>
+              {course.course_desc && (
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {course.course_desc}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2 text-[11px] text-slate-600">
+                {unitsLabel && <span>{unitsLabel}</span>}
+                {course.dept_name && (
+                  <span>Department: {course.dept_name}</span>
+                )}
+              </div>
+              {course.metadata && (
+                <p className="text-[11px] text-slate-500">{course.metadata}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const formatProgramDetails = (
@@ -315,12 +678,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         9th Grade
                       </div>
                       <div className="space-y-1">
-                        {coursesByGrade["9TH_GRADE_COURSES"].map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-blue-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByGrade["9TH_GRADE_COURSES"].map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-blue-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -330,12 +698,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         10th Grade
                       </div>
                       <div className="space-y-1">
-                        {coursesByGrade["10TH_GRADE_COURSES"].map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-blue-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByGrade["10TH_GRADE_COURSES"].map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-blue-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -345,12 +718,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         11th Grade
                       </div>
                       <div className="space-y-1">
-                        {coursesByGrade["11TH_GRADE_COURSES"].map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-blue-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByGrade["11TH_GRADE_COURSES"].map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-blue-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -360,12 +738,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         12th Grade
                       </div>
                       <div className="space-y-1">
-                        {coursesByGrade["12TH_GRADE_COURSES"].map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-blue-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByGrade["12TH_GRADE_COURSES"].map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-blue-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -385,12 +768,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         Level 1 - Introductory
                       </div>
                       <div className="space-y-1">
-                        {coursesByLevel.LEVEL_1_POS_COURSES.map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-purple-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByLevel.LEVEL_1_POS_COURSES.map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-purple-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -400,12 +788,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         Level 2 - Concentrator
                       </div>
                       <div className="space-y-1">
-                        {coursesByLevel.LEVEL_2_POS_COURSES.map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-purple-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByLevel.LEVEL_2_POS_COURSES.map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-purple-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -415,12 +808,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         Level 3 - Advanced
                       </div>
                       <div className="space-y-1">
-                        {coursesByLevel.LEVEL_3_POS_COURSES.map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-purple-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByLevel.LEVEL_3_POS_COURSES.map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-purple-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -430,12 +828,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         Level 4 - Capstone
                       </div>
                       <div className="space-y-1">
-                        {coursesByLevel.LEVEL_4_POS_COURSES.map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-purple-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByLevel.LEVEL_4_POS_COURSES.map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-purple-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -445,12 +848,17 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                         Recommended Courses
                       </div>
                       <div className="space-y-1">
-                        {coursesByLevel.RECOMMENDED_COURSES.map((course, idx) => (
-                          <div key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-green-400 mt-0.5">•</span>
-                            <span>{course}</span>
-                          </div>
-                        ))}
+                        {coursesByLevel.RECOMMENDED_COURSES.map(
+                          (course, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-slate-700 flex items-start gap-2"
+                            >
+                              <span className="text-green-400 mt-0.5">•</span>
+                              <span>{course}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -473,8 +881,12 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                 <School className="w-4 h-4 text-blue-700" />
               </div>
               <div>
-                <div className="font-semibold text-slate-900">High School Programs</div>
-                <div className="text-xs text-slate-500">{data.highSchoolPrograms.length} programs available</div>
+                <div className="font-semibold text-slate-900">
+                  High School Programs
+                </div>
+                <div className="text-xs text-slate-500">
+                  {data.highSchoolPrograms.length} programs available
+                </div>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 group-open:rotate-90 transition-transform" />
@@ -485,11 +897,14 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                 key={idx}
                 className="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all"
               >
-                <div className="font-semibold text-slate-900 mb-2">{prog.name}</div>
+                <div className="font-semibold text-slate-900 mb-2">
+                  {prog.name}
+                </div>
                 <div className="mb-2">
                   <span className="inline-flex items-center gap-2 text-xs text-slate-600 mb-2">
                     <span className="px-2 py-1 bg-slate-100 rounded-md font-medium">
-                      {prog.schoolCount} school{prog.schoolCount !== 1 ? "s" : ""}
+                      {prog.schoolCount} school
+                      {prog.schoolCount !== 1 ? "s" : ""}
                     </span>
                   </span>
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -518,8 +933,12 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                 <GraduationCap className="w-4 h-4 text-red-700" />
               </div>
               <div>
-                <div className="font-semibold text-slate-900">College Programs</div>
-                <div className="text-xs text-slate-500">{data.collegePrograms.length} programs available</div>
+                <div className="font-semibold text-slate-900">
+                  College Programs
+                </div>
+                <div className="text-xs text-slate-500">
+                  {data.collegePrograms.length} programs available
+                </div>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 group-open:rotate-90 transition-transform" />
@@ -530,11 +949,14 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                 key={idx}
                 className="bg-white rounded-lg p-4 border border-slate-200 hover:border-red-300 hover:shadow-sm transition-all"
               >
-                <div className="font-semibold text-slate-900 mb-2">{prog.name}</div>
+                <div className="font-semibold text-slate-900 mb-2">
+                  {prog.name}
+                </div>
                 <div className="mb-2">
                   <span className="inline-flex items-center gap-2 text-xs text-slate-600 mb-2">
                     <span className="px-2 py-1 bg-slate-100 rounded-md font-medium">
-                      {prog.campusCount} campus{prog.campusCount !== 1 ? "es" : ""}
+                      {prog.campusCount} campus
+                      {prog.campusCount !== 1 ? "es" : ""}
                     </span>
                   </span>
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -562,7 +984,10 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                       )}
                       <span>
                         {prog.variantCount || prog.variants.length}{" "}
-                        Specialization{(prog.variantCount || prog.variants.length) !== 1 ? "s" : ""}
+                        Specialization
+                        {(prog.variantCount || prog.variants.length) !== 1
+                          ? "s"
+                          : ""}
                       </span>
                     </button>
 
@@ -581,6 +1006,24 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                     )}
                   </div>
                 )}
+
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => toggleCourseList(prog.name)}
+                    className="flex items-center gap-2 text-xs font-medium text-red-700 hover:text-red-900 transition-colors"
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                    {expandedCourseLists.has(prog.name) ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                    <span>Course List</span>
+                  </button>
+
+                  {expandedCourseLists.has(prog.name) &&
+                    renderCourseList(prog.name, prog.campuses, prog.variants)}
+                </div>
               </div>
             ))}
           </div>
@@ -625,7 +1068,7 @@ export default function ChatMessages({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSeconds, setLoadingSeconds] = useState(0);
-  
+
   // Check if this is the initial state (no user messages yet)
   const isInitialState = messages.filter(m => m.role === "user").length === 0;
 
@@ -682,14 +1125,17 @@ export default function ChatMessages({
                   className="w-20 h-20 object-contain mx-auto drop-shadow-sm"
                 />
               </div>
-              
+
               {/* Title */}
               <div className="space-y-2">
-                <h1 className="text-4xl font-bold text-slate-900 tracking-tight" style={{ letterSpacing: "0.04em" }}>
-                  UH Pathways
+                <h1
+                  className="text-4xl font-bold text-slate-900 tracking-tight"
+                  style={{ letterSpacing: "0.04em" }}
+                >
+                  Kamaʻāina Pathways
                 </h1>
               </div>
-              
+
               {/* Greeting Text */}
               <div className="text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
                 <MarkdownRenderer
@@ -843,46 +1289,48 @@ export default function ChatMessages({
           </div>
         )}
 
-        {suggestedQuestions.length > 0 && !isLoading && messages.filter(m => m.role === "user").length < 3 && (
-          <div className="flex justify-center py-6">
-            <div className="max-w-2xl w-full">
-              <button
-                onClick={() => setShowSuggestions(!showSuggestions)}
-                className="flex items-center justify-center gap-2 mb-3 mx-auto hover:opacity-70 transition-opacity cursor-pointer group"
-              >
-                <span className="text-xs font-bold text-black uppercase tracking-wider">
-                  {userProfile?.isComplete
-                    ? "Explore Options"
-                    : "Quick Actions"}
-                </span>
-                {showSuggestions ? (
-                  <ChevronUp className="w-4 h-4 text-black" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-black" />
-                )}
-              </button>
+        {suggestedQuestions.length > 0 &&
+          !isLoading &&
+          messages.filter(m => m.role === "user").length < 3 && (
+            <div className="flex justify-center py-6">
+              <div className="max-w-2xl w-full">
+                <button
+                  onClick={() => setShowSuggestions(!showSuggestions)}
+                  className="flex items-center justify-center gap-2 mb-3 mx-auto hover:opacity-70 transition-opacity cursor-pointer group"
+                >
+                  <span className="text-xs font-bold text-black uppercase tracking-wider">
+                    {userProfile?.isComplete
+                      ? "Explore Options"
+                      : "Quick Actions"}
+                  </span>
+                  {showSuggestions ? (
+                    <ChevronUp className="w-4 h-4 text-black" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-black" />
+                  )}
+                </button>
 
-              {showSuggestions && (
-                <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-top-2 duration-200">
-                  {suggestedQuestions.map((question, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSuggestedQuestionClick(question)}
-                      className="group relative bg-white border-2 border-black hover:bg-black hover:text-white text-black px-4 py-3 rounded-xl transition-all duration-200 text-left"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium line-clamp-2">
-                          {question}
-                        </span>
-                        <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+                {showSuggestions && (
+                  <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-top-2 duration-200">
+                    {suggestedQuestions.map((question, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSuggestedQuestionClick(question)}
+                        className="group relative bg-white border-2 border-black hover:bg-black hover:text-white text-black px-4 py-3 rounded-xl transition-all duration-200 text-left"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium line-clamp-2">
+                            {question}
+                          </span>
+                          <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         <div ref={messagesEndRef} />
       </div>
