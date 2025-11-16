@@ -686,7 +686,7 @@ export default function ChatMessages({
               {/* Title */}
               <div className="space-y-2">
                 <h1 className="text-4xl font-bold text-slate-900 tracking-tight" style={{ letterSpacing: "0.04em" }}>
-                  Kamaʻāina Pathways
+                  UH Pathways
                 </h1>
               </div>
               

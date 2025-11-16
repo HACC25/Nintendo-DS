@@ -58,7 +58,7 @@ export default function NavSidebar({
       <div className="flex-shrink-0 bg-white border-b border-slate-200 p-3 flex items-center justify-between">
         {isOpen && (
           <span className="font-bold text-slate-900 text-sm whitespace-nowrap">
-            Kamaʻāina Pathways
+            UH Pathways
           </span>
         )}
         <button

@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Kamaʻāina Pathways",
+  title: "UH Pathways",
   description: "A platform to explore educational and career pathways in Hawaiʻi.",
   icons: {
     icon: '/images/uhcc-logo-3.png',
