@@ -94,20 +94,20 @@ const extractDisplayedSocCodes = (
 
 const getInitialGreeting = (language: Language | null): string => {
   if (!language)
-    return "## Aloha 🌺\n\nI can help you explore educational pathways in Hawaii. What are you interested in?";
+    return "## Aloha 🌺\n\nI can help you explore educational pathways in Hawaii. To start, tell me a bit about yourself.";
 
   switch (language.code) {
     case "haw":
-      return "## Aloha 🌺\n\nE kōkua ana au iā ʻoe e ʻimi i nā ala hoʻonaʻauao ma Hawaiʻi. He aha kou makemake?";
+      return "## Aloha 🌺\n\nE kōkua ana au iā ʻoe e ʻimi i nā ala hoʻonaʻauao ma Hawaiʻi. E haʻi mai i kekahi mea e pili ana iā ʻoe.";
 
     case "hwp":
       return "## Eh howzit!\n\nI going help you check out educational pathways in Hawaii. What you like know?";
 
     case "tl":
-      return "## Kumusta!\n\nTutulungan kitang tuklasin ang mga landas ng edukasyon sa Hawaii. Ano ang gusto mong malaman?";
+      return "## Kumusta!\n\nTutulungan kitang tuklasin ang mga landas ng edukasyon sa Hawaii. Sabihin mo sa akin ang tungkol sa iyong sarili.";
 
     default:
-      return "## Aloha 🌺\n\nI can help you explore educational pathways in Hawaii. What are you interested in?";
+      return "## Aloha 🌺\n\nI can help you explore educational pathways in Hawaii. To start, tell me a bit about yourself.";
   }
 };
 
@@ -115,9 +115,7 @@ const getInitialSuggestions = (language: Language | null): string[] => {
   if (!language || language.code === "en") {
     return [
       "I'm in high school",
-      "Show me UH programs",
-      "What careers can I explore?",
-      "Programs on my island",
+      "I'm in college",
     ];
   }
 
