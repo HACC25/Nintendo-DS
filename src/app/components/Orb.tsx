@@ -1,22 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle, Vec3 } from 'ogl';
 
-interface OrbProps {
-  hue?: number;
-  hoverIntensity?: number;
-  rotateOnHover?: boolean;
-  forceHoverState?: boolean;
-}
-
-export default function Orb({
-  hue = 0,
-  hoverIntensity = 0.2,
-  rotateOnHover = true,
-  forceHoverState = false
-}: OrbProps) {
-  const ctnDom = useRef<HTMLDivElement>(null);
-
-  const vert = /* glsl */ `
+const VERT_SHADER = /* glsl */ `
     precision highp float;
     attribute vec2 position;
     attribute vec2 uv;
@@ -27,7 +12,7 @@ export default function Orb({
     }
   `;
 
-  const frag = /* glsl */ `
+const FRAG_SHADER = /* glsl */ `
     precision highp float;
 
     uniform float iTime;
@@ -175,6 +160,21 @@ export default function Orb({
     }
   `;
 
+interface OrbProps {
+  hue?: number;
+  hoverIntensity?: number;
+  rotateOnHover?: boolean;
+  forceHoverState?: boolean;
+}
+
+export default function Orb({
+  hue = 0,
+  hoverIntensity = 0.2,
+  rotateOnHover = true,
+  forceHoverState = false
+}: OrbProps) {
+  const ctnDom = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const container = ctnDom.current;
     if (!container) return;
@@ -186,8 +186,8 @@ export default function Orb({
 
     const geometry = new Triangle(gl);
     const program = new Program(gl, {
-      vertex: vert,
-      fragment: frag,
+      vertex: VERT_SHADER,
+      fragment: FRAG_SHADER,
       uniforms: {
         iTime: { value: 0 },
         iResolution: {
