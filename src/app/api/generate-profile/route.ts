@@ -76,6 +76,23 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[Generate Profile API] ❌ Error:", error);
+    
+    // Check if it's a rate limit error
+    const isRateLimitError = 
+      (error as any)?.status === 429 || 
+      (error as any)?.error?.status === 429;
+    
+    if (isRateLimitError) {
+      return NextResponse.json(
+        { 
+          error: "Rate limit exceeded",
+          message: "The AI service is currently busy. Please wait a moment and try again.",
+          retryAfter: 30
+        },
+        { status: 429 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

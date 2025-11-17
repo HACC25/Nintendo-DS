@@ -6,6 +6,36 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+/**
+ * Retry function with exponential backoff for rate limit errors
+ * @param fn - The async function to retry
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @param baseDelay - Initial delay in milliseconds (default: 1000ms)
+ */
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      const isRateLimitError = error?.status === 429 || error?.error?.status === 429;
+      const isLastRetry = i === maxRetries - 1;
+
+      if (!isRateLimitError || isLastRetry) {
+        throw error;
+      }
+
+      const delay = baseDelay * Math.pow(2, i);
+      console.log(`[Retry] ⏳ Rate limit hit, waiting ${delay}ms before retry ${i + 1}/${maxRetries}`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -90,14 +120,16 @@ Determine if they're asking for something specific or want profile-based recomme
 If they mention specific subjects/programs, prioritize those over their profile.`;
 
   try {
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.2,
-    });
+    const response = await retryWithBackoff(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.2,
+      })
+    );
 
     const content = response.choices[0].message.content;
     if (!content) throw new Error("Empty response");
@@ -190,11 +222,13 @@ export async function getProfilingChatResponse(chatMessages: ChatMessage[]) {
 Be warm and conversational. Ask ONE question at a time. After 8-10 exchanges, suggest exploring career options.`;
 
   try {
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [{ role: "system", content: systemPrompt }, ...chatMessages],
-      temperature: 0.8,
-    });
+    const response = await retryWithBackoff(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "system", content: systemPrompt }, ...chatMessages],
+        temperature: 0.8,
+      })
+    );
 
     return response.choices[0].message.content;
   } catch (error) {
@@ -226,14 +260,16 @@ Write a detailed 4-5 sentence paragraph IN ENGLISH that captures:
 Write in third person and include all relevant details mentioned. This profile will be used by an AI to make intelligent career recommendations and database queries.`;
 
   try {
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: transcript },
-      ],
-      temperature: 0.3,
-    });
+    const response = await retryWithBackoff(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: transcript },
+        ],
+        temperature: 0.3,
+      })
+    );
 
     return response.choices[0].message.content;
   } catch (error) {
@@ -484,18 +520,20 @@ Create responses that:
 
 Return ONLY a JSON array of strings. Example: ["response 1", "response 2", "response 3"]`;
 
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You generate student response options for a career counseling chat. Return ONLY a valid JSON array of 3-4 strings, nothing else.",
-        },
-        { role: "user", content: promptGenerationPrompt },
-      ],
-      temperature: 0.8,
-    });
+    const response = await retryWithBackoff(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You generate student response options for a career counseling chat. Return ONLY a valid JSON array of 3-4 strings, nothing else.",
+          },
+          { role: "user", content: promptGenerationPrompt },
+        ],
+        temperature: 0.8,
+      })
+    );
 
     const content = response.choices[0].message.content;
     if (!content) {
@@ -607,17 +645,19 @@ ${userMessageCount >= 2 ? "Explore their goals and any concerns they have." : ""
 ${userMessageCount >= 3 ? "We have enough for a profile! Thank them and prepare to analyze." : ""}`;
 
   try {
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages.slice(-6).map(m => ({
-          role: m.role as "user" | "assistant" | "system",
-          content: m.content,
-        })),
-      ],
-      temperature: 0.7,
-    });
+    const response = await retryWithBackoff(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages.slice(-6).map(m => ({
+            role: m.role as "user" | "assistant" | "system",
+            content: m.content,
+          })),
+        ],
+        temperature: 0.7,
+      })
+    );
 
     const message =
       response.choices[0].message.content || getDefaultMessage(language);
@@ -783,14 +823,16 @@ EXTRACTED DETAILS:
 Generate questions in ${language === "haw" ? "Hawaiian" : language === "hwp" ? "Pidgin" : language === "tl" ? "Tagalog" : "English"}.`;
 
   try {
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-    });
+    const response = await retryWithBackoff(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+      })
+    );
 
     const content = response.choices[0].message.content;
     if (!content) {

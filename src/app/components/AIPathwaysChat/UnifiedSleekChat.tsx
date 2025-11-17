@@ -757,6 +757,15 @@ export default function UnifiedSleekChat({
           response.status,
           errorData
         );
+        
+        // Show user-friendly error message for rate limits
+        if (response.status === 429) {
+          const errorMessage: Message = {
+            role: "assistant",
+            content: errorData.message || "I'm currently experiencing high demand. Please wait a moment and try again. Your conversation is saved and I'll be ready to help you shortly! 🌺",
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
       }
     } catch (error) {
       console.error("Error building profile:", error);

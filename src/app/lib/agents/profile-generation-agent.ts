@@ -5,6 +5,7 @@
 // Triggered: After 3+ user messages (first-time profile creation)
 
 import Groq from "groq-sdk";
+import { retryWithBackoff } from "@/app/utils/groqClient";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -197,17 +198,19 @@ IMPORTANT GUIDELINES:
 - USE THE RIGHT TERMINOLOGY - respect who the person actually is`;
 
   try {
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `CONVERSATION TO ANALYZE (Language: ${language}):\n\n${transcript}`,
-        },
-      ],
-      temperature: 0.2,
-    });
+    const response = await retryWithBackoff(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `CONVERSATION TO ANALYZE (Language: ${language}):\n\n${transcript}`,
+          },
+        ],
+        temperature: 0.2,
+      })
+    );
 
     const content = response.choices[0].message.content;
     if (!content) {
