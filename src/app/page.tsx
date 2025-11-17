@@ -8,6 +8,7 @@ import UnifiedSleekChat from "./components/AIPathwaysChat/UnifiedSleekChat";
 import { Language } from "./components/LanguageSelection";
 import OnboardingWizard from "./components/AIPathwaysChat/Onboarding/OnboardingWizard";
 import Particles from "./components/Particles";
+import Link from "next/link";
 
 // Captures info gathered during onboarding (can expand later).
 type UserProfile = {
@@ -123,9 +124,9 @@ export default function MainPage() {
       {/* Simple corner logo */}
       <div className="absolute top-8 left-8 z-20">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-200">
+          <Link className="text-sm font-medium text-gray-200" href="/">
             UH Pathways
-          </span>
+          </Link>
         </div>
       </div>
 

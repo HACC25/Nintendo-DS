@@ -94,7 +94,7 @@ const extractDisplayedSocCodes = (
 
 const getInitialGreeting = (language: Language | null): string => {
   if (!language)
-    return "## Aloha 🌺\n\nI can help you explore educational pathways in Hawaii. What are you interested in?";
+    return "I can help you explore educational pathways in Hawaii. What are you interested in?";
 
   switch (language.code) {
     case "haw":
@@ -107,7 +107,7 @@ const getInitialGreeting = (language: Language | null): string => {
       return "## Kumusta!\n\nTutulungan kitang tuklasin ang mga landas ng edukasyon sa Hawaii. Ano ang gusto mong malaman?";
 
     default:
-      return "## Aloha 🌺\n\nI can help you explore educational pathways in Hawaii. What are you interested in?";
+      return "I can help you explore educational pathways in Hawaii. What are you interested in?";
   }
 };
 
