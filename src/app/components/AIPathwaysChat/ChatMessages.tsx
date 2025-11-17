@@ -405,9 +405,7 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
 
     const { keywords, deptKeywords } = buildSearchKeywords();
     const primaryKeyword =
-      keywords.find(Boolean) ||
-      programName.toLowerCase().trim() ||
-      programName;
+      keywords.find(Boolean) || programName.toLowerCase().trim() || programName;
     const keywordExtras = keywords.filter(
       keyword => keyword && keyword !== primaryKeyword
     );
@@ -575,9 +573,7 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
         <div className="mt-2 text-xs text-red-600 space-y-2">
           <p>{state.error}</p>
           <button
-            onClick={() =>
-              fetchCoursesForCampus(programName, campus, variants)
-            }
+            onClick={() => fetchCoursesForCampus(programName, campus, variants)}
             className="text-red-700 underline decoration-dotted hover:text-red-900 transition-colors"
           >
             Try again
@@ -644,7 +640,6 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
       </div>
     );
   };
-
 
   const formatProgramDetails = (
     programName: string,
@@ -1017,7 +1012,6 @@ const PathwayVisualization: React.FC<{ data: PathwayData }> = ({ data }) => {
                     onClick={() => toggleCourseList(prog.name)}
                     className="flex items-center gap-2 text-xs font-medium text-red-700 hover:text-red-900 transition-colors"
                   >
-                    <Database className="w-3.5 h-3.5" />
                     {expandedCourseLists.has(prog.name) ? (
                       <ChevronDown className="w-3.5 h-3.5" />
                     ) : (
