@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import UnifiedSleekChat from '../components/AIPathwaysChat/UnifiedSleekChat'
 import { Language } from '../components/LanguageSelection'
-import { Ripple } from '@/components/ui/shadcn-io/ripple'
 
 const ChatPage = () => {
   const router = useRouter()
