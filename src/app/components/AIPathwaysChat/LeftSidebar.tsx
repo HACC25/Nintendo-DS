@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
-import { X, User, Target, MapPin, Clock } from "lucide-react";
+import { X, User, Target } from "lucide-react";
 import { UserProfile } from "./types";
 
 // Enhanced profile completeness utility
@@ -343,33 +343,6 @@ export default function LeftSidebar({
                               <span className="text-xs text-gray-700">{goal}</span>
                             </div>
                           ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Location & Timeline - Compact Info */}
-                    {(userProfile.extracted.location || userProfile.extracted.timeline) && (
-                      <div>
-                        <h4 className="font-semibold text-black text-xs mb-2.5">
-                          PREFERENCES
-                        </h4>
-                        <div className="space-y-2">
-                          {userProfile.extracted.location && userProfile.extracted.location !== "null" && (
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <MapPin className="w-3.5 h-3.5" />
-                              <span className="text-xs">
-                                {userProfile.extracted.location.replace(/_/g, " ")}
-                              </span>
-                            </div>
-                          )}
-                          {userProfile.extracted.timeline && userProfile.extracted.timeline !== "null" && (
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <Clock className="w-3.5 h-3.5" />
-                              <span className="text-xs">
-                                {userProfile.extracted.timeline.replace(/_/g, " ")}
-                              </span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}

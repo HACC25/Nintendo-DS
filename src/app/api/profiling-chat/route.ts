@@ -860,24 +860,56 @@ function generateCareerSuggestions(interests: string, language: string = "en"): 
       entrepreneurship: ["Business Owner", "Startup Founder", "Consultant", "Product Manager"],
       engineering: ["Civil Engineer", "Mechanical Engineer", "Electrical Engineer", "Project Manager"],
       construction: ["Construction Manager", "Civil Engineer", "Architect", "Project Supervisor"],
+      arts: ["Graphic Designer", "Art Director", "Multimedia Artist", "Creative Director"],
+      creative: ["Content Creator", "Video Producer", "UX Designer", "Digital Artist"],
+      media: ["Videographer", "Social Media Manager", "Film Editor", "Broadcast Producer"],
+      education: ["Teacher", "School Counselor", "Curriculum Developer", "Education Administrator"],
+      teaching: ["Elementary Teacher", "High School Teacher", "Special Education Teacher", "Instructional Coordinator"],
+      hospitality: ["Hotel Manager", "Event Coordinator", "Tourism Director", "Guest Services Manager"],
+      tourism: ["Tour Guide", "Travel Coordinator", "Resort Manager", "Cultural Program Director"],
+      science: ["Research Scientist", "Laboratory Technician", "Environmental Scientist", "Marine Biologist"],
+      research: ["Research Analyst", "Lab Manager", "Clinical Research Coordinator", "Data Analyst"],
+      law: ["Attorney", "Paralegal", "Legal Advisor", "Compliance Officer"],
+      public: ["Social Worker", "Community Organizer", "Public Administrator", "Policy Analyst"],
+      service: ["Case Manager", "Program Coordinator", "Outreach Specialist", "Nonprofit Director"],
+      agriculture: ["Agricultural Manager", "Farm Supervisor", "Crop Consultant", "Sustainable Farming Specialist"],
+      environment: ["Environmental Scientist", "Conservation Officer", "Sustainability Coordinator", "Wildlife Biologist"],
       default: ["Career Counselor", "Program Coordinator", "Analyst", "Specialist"],
     },
     haw: {
       technology: ["Enekinia Polokalamu", "ʻEpekialisika ʻIkepili", "Luna IT", "ʻAna Pale"],
       computer: ["Hana Polokalamu", "Hana Pūnaewele", "ʻAna Māhele", "Luna Waihona"],
       healthcare: ["Kahu Mālama", "Kauka", "Luna Mālama", "Limahana Lāʻau"],
+      arts: ["Mea Hana Kiʻi", "Luna Hana Noʻeau", "Mea Hana Multimedia", "Luna Hana Mākaukau"],
+      education: ["Kumu", "Kūkākūkā Kula", "Mea Hana Kumumanaʻo", "Luna Hoʻonaʻauao"],
+      hospitality: ["Luna Hale Hoʻokipa", "Hoʻonohonoho Hanana", "Luna Huakaʻi", "Luna Lawelawe Malihini"],
+      science: ["ʻEpekema Noiʻi", "Limahana Lako Hana", "ʻEpekema Kaiāulu", "ʻEpekema Kai"],
+      law: ["Loio", "Kokua Loio", "Kūkākūkā Kānāwai", "Luna Malama Kānāwai"],
+      agriculture: ["Luna Mahiʻai", "Luna Māla", "Kūkākūkā Mahiʻai", "ʻEpekialisika Mahiʻai Paʻa"],
       default: ["Kūkākūkā ʻOihana", "Luna Papahana", "ʻAna", "ʻEpekialisika"],
     },
     hwp: {
       technology: ["Software Engineer", "Data guy", "IT Specialist", "Cybersecurity"],
       computer: ["Software Developer", "Web Developer", "Systems Analyst", "Database guy"],
       healthcare: ["Registered Nurse", "Doctor", "Healthcare Boss", "Medical Tech"],
+      arts: ["Graphic Designer", "Art Boss", "Creative guy", "Media Artist"],
+      education: ["Teacher", "School Counselor", "Curriculum guy", "Principal"],
+      hospitality: ["Hotel Manager", "Event Coordinator", "Tourism Boss", "Guest Services"],
+      science: ["Scientist", "Lab Tech", "Environmental guy", "Marine Biologist"],
+      law: ["Lawyer", "Paralegal", "Legal Advisor", "Compliance guy"],
+      agriculture: ["Farm Manager", "Farm Boss", "Crop guy", "Farming Specialist"],
       default: ["Career helper", "Program coordinator", "Analyst", "Specialist"],
     },
     tl: {
       technology: ["Software Engineer", "Data Scientist", "IT Specialist", "Cybersecurity Analyst"],
       computer: ["Software Developer", "Web Developer", "Systems Analyst", "Database Administrator"],
       healthcare: ["Registered Nurse", "Doktor", "Healthcare Administrator", "Medical Technician"],
+      arts: ["Graphic Designer", "Direktor ng Sining", "Multimedia Artist", "Creative Director"],
+      education: ["Guro", "School Counselor", "Curriculum Developer", "Administrador ng Edukasyon"],
+      hospitality: ["Hotel Manager", "Event Coordinator", "Direktor ng Turismo", "Guest Services Manager"],
+      science: ["Research Scientist", "Laboratory Technician", "Environmental Scientist", "Marine Biologist"],
+      law: ["Abogado", "Paralegal", "Legal Advisor", "Compliance Officer"],
+      agriculture: ["Agricultural Manager", "Farm Supervisor", "Crop Consultant", "Sustainable Farming Specialist"],
       default: ["Career Counselor", "Program Coordinator", "Analyst", "Specialist"],
     },
   };
@@ -993,16 +1025,26 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.log("Profiling chat API error:", error);
 
+    const interestOptions = [
+      "Technology & Computer Science",
+      "Healthcare & Nursing",
+      "Business & Entrepreneurship",
+      "Engineering & Construction",
+      "Arts & Creative Media",
+      "Education & Teaching",
+      "Hospitality & Tourism",
+      "Science & Research",
+      "Law & Public Service",
+      "Agriculture & Environment",
+    ];
+
+    console.log("[Profiling Chat] Returning interest options count:", interestOptions.length);
+
     return NextResponse.json(
       {
         message:
           "Hi! I'm here to help you explore career paths in Hawaii. What are you interested in?",
-        suggestedQuestions: [
-          "Technology & Computer Science",
-          "Healthcare & Nursing",
-          "Business & Entrepreneurship",
-          "Engineering & Construction",
-        ],
+        suggestedQuestions: interestOptions,
         profilingState: {
           progress: 0,
           currentQuestion: 1,

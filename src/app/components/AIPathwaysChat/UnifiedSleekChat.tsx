@@ -118,6 +118,12 @@ const getInitialSuggestions = (language: Language | null): string[] => {
       "Healthcare & Nursing",
       "Business & Entrepreneurship",
       "Engineering & Construction",
+      "Arts & Creative Media",
+      "Education & Teaching",
+      "Hospitality & Tourism",
+      "Science & Research",
+      "Law & Public Service",
+      "Agriculture & Environment",
     ];
   }
 
@@ -128,6 +134,12 @@ const getInitialSuggestions = (language: Language | null): string[] => {
         "Mālama olakino a me ka mālama",
         "ʻOihana pilikino a me ka hoʻokele",
         "Enekinia a me ka hale kūkulu",
+        "Nā hana noʻeau a me nā media hana",
+        "Hoʻonaʻauao a me ka aʻo ʻana",
+        "Hoʻokipa a me ka huakaʻi",
+        "ʻEpekema a me ka noiʻi",
+        "Kānāwai a me ka lawelawe lehulehu",
+        "Mahiʻai a me ka hoʻomaluʻana",
       ];
 
     case "hwp":
@@ -136,6 +148,12 @@ const getInitialSuggestions = (language: Language | null): string[] => {
         "Healthcare & Nursing",
         "Business stuffs",
         "Engineering & Construction",
+        "Arts & Creative kine",
+        "Teaching & Education",
+        "Hotel work & Tourism",
+        "Science & Research",
+        "Law & Government work",
+        "Farming & Environment",
       ];
 
     case "tl":
@@ -144,6 +162,12 @@ const getInitialSuggestions = (language: Language | null): string[] => {
         "Pag-aalaga ng Kalusugan at Nursing",
         "Negosyo at Entrepreneurship",
         "Engineering at Construction",
+        "Sining at Creative Media",
+        "Edukasyon at Pagtuturo",
+        "Hospitality at Turismo",
+        "Agham at Pananaliksik",
+        "Batas at Serbisyo Publiko",
+        "Agrikultura at Kapaligiran",
       ];
 
     default:
@@ -152,6 +176,12 @@ const getInitialSuggestions = (language: Language | null): string[] => {
         "Healthcare & Nursing",
         "Business & Entrepreneurship",
         "Engineering & Construction",
+        "Arts & Creative Media",
+        "Education & Teaching",
+        "Hospitality & Tourism",
+        "Science & Research",
+        "Law & Public Service",
+        "Agriculture & Environment",
       ];
   }
 };
