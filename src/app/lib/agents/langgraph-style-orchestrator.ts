@@ -25,6 +25,7 @@ import { ReflectionAgent } from "./reflection-agent";
 import { ConversationalAgent } from "./conversational-agent";
 import { classifyQueryWithLLM } from "./llm-classifier";
 import { aggregateHighSchoolPrograms, aggregateCollegePrograms } from "../helpers/pathway-aggregator";
+import { getCIPCodesForCareer, getEnhancedKeywordsForCareer } from "../helpers/career-to-cip-mapping";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -81,6 +82,7 @@ class StateManager {
   // Keywords & Planning
   keywords: string[] = [];
   extractedKeywords: string[] = []; // From conversational intelligence extraction
+  targetCIPCodes: string[] = []; // CIP codes extracted from career goals
   toolCalls: ToolCall[] = [];
   toolResults: any[] = [];
   
@@ -155,6 +157,34 @@ async function profileExtractorNode(state: StateManager): Promise<void> {
   
   const keywords = extractKeywords(state.userQuery);
   
+  // ✨ NEW: Extract CIP codes from career goals in profile
+  if (state.userProfile.careerGoals && state.userProfile.careerGoals.length > 0) {
+    const allCIPCodes: string[] = [];
+    const enhancedCareerKeywords: string[] = [];
+    
+    for (const careerGoal of state.userProfile.careerGoals) {
+      const cipCodes = getCIPCodesForCareer(careerGoal);
+      if (cipCodes.length > 0) {
+        console.log(`[ProfileExtractor] 🎯 Career "${careerGoal}" mapped to CIP codes: ${cipCodes.join(", ")}`);
+        allCIPCodes.push(...cipCodes);
+        
+        // Add enhanced keywords for this career
+        const careerKeywords = getEnhancedKeywordsForCareer(careerGoal);
+        enhancedCareerKeywords.push(...careerKeywords);
+      }
+    }
+    
+    if (allCIPCodes.length > 0) {
+      state.targetCIPCodes = [...new Set(allCIPCodes)];
+      console.log(`[ProfileExtractor] 🎓 Target CIP codes for search: ${state.targetCIPCodes.join(", ")}`);
+    }
+    
+    if (enhancedCareerKeywords.length > 0) {
+      keywords.push(...enhancedCareerKeywords);
+      console.log(`[ProfileExtractor] 💡 Enhanced keywords from careers: ${enhancedCareerKeywords.slice(0, 5).join(", ")}`);
+    }
+  }
+  
   // Detect topic pivot keywords (signals a topic change)
   const topicPivotIndicators = /^(what about|how about|tell me about|instead|actually|now|switch to|change to|no|wait)/i;
   const isTopicPivot = topicPivotIndicators.test(state.userQuery.toLowerCase());
@@ -216,14 +246,24 @@ async function profileExtractorNode(state: StateManager): Promise<void> {
 async function toolPlannerNode(state: StateManager): Promise<void> {
   state.log("NODE: ToolPlanner");
   
+  // ✨ NEW: Use CIP-based search if we have target CIP codes
+  const useCIPSearch = state.targetCIPCodes && state.targetCIPCodes.length > 0;
+  
   const systemPrompt = `You are a tool planning agent for Hawaii's educational pathway system.
 
 AVAILABLE TOOLS:
 - trace_pathway(keywords: string[]) - Comprehensive pathway search (HS → College → Career)
 - search_hs_programs(keywords: string[]) - Search high school programs
 - search_college_programs(keywords: string[]) - Search college programs
+- get_college_by_cip(cipCodes: string[]) - Get college programs by CIP codes (MOST ACCURATE for careers)
 - get_careers(cipCodes: string[]) - Get careers from CIP codes
 - expand_cip(cip2Digits: string[]) - Expand 2-digit CIP codes
+
+${useCIPSearch ? `
+🎯 PRIORITY: User has career goals with known CIP codes!
+Target CIP Codes: ${state.targetCIPCodes.join(", ")}
+YOU MUST USE get_college_by_cip with these CIP codes for accurate program matching!
+` : ""}
 
 ${state.searchStrategy ? `
 RETRY STRATEGY (Attempt ${state.attemptNumber}):
@@ -245,6 +285,7 @@ RESPOND WITH ONLY VALID JSON (no markdown):
 Query: "${state.userQuery}"
 Keywords: ${state.keywords.join(", ")}
 Profile interests: ${state.userProfile.interests.join(", ")}
+${useCIPSearch ? `\n🎯 Target CIP codes (from career goals): ${state.targetCIPCodes.join(", ")}\n** USE get_college_by_cip with these CIP codes for most accurate results! **` : ""}
 
 Return JSON with tool array:`;
 
@@ -279,10 +320,31 @@ Return JSON with tool array:`;
     
     // Ensure minimum tools
     if (state.toolCalls.length === 0) {
-      state.toolCalls = [
-        { name: "trace_pathway", args: state.keywords },
-        { name: "get_careers", args: ["all"] }  // ← ALWAYS include careers
-      ];
+      // ✨ Use CIP-based search if we have target CIP codes
+      if (useCIPSearch) {
+        state.toolCalls = [
+          { name: "get_college_by_cip", args: state.targetCIPCodes },
+          { name: "get_careers", args: state.targetCIPCodes }
+        ];
+        console.log("[ToolPlanner] 🎯 Using CIP-based search with codes:", state.targetCIPCodes.join(", "));
+      } else {
+        state.toolCalls = [
+          { name: "trace_pathway", args: state.keywords },
+          { name: "get_careers", args: ["all"] }
+        ];
+      }
+    }
+    
+    // ✨ NEW: If we have CIP codes but no CIP tool call, add it
+    if (useCIPSearch) {
+      const hasCIPTool = state.toolCalls.some(tc => 
+        tc.name === "get_college_by_cip"
+      );
+      
+      if (!hasCIPTool) {
+        console.log("[ToolPlanner] 🎯 Adding get_college_by_cip with target CIP codes");
+        state.toolCalls.unshift({ name: "get_college_by_cip", args: state.targetCIPCodes });
+      }
     }
     
     // CRITICAL FIX: Ensure get_careers is ALWAYS called for complete pathways
@@ -299,10 +361,18 @@ Return JSON with tool array:`;
     
   } catch (error: any) {
     state.addError(`Planning error: ${error.message}`);
-    state.toolCalls = [
-      { name: "trace_pathway", args: state.keywords },
-      { name: "get_careers", args: ["all"] }  // ← ALWAYS include careers in fallback
-    ];
+    // ✨ Use CIP-based search in fallback if available
+    if (useCIPSearch) {
+      state.toolCalls = [
+        { name: "get_college_by_cip", args: state.targetCIPCodes },
+        { name: "get_careers", args: state.targetCIPCodes }
+      ];
+    } else {
+      state.toolCalls = [
+        { name: "trace_pathway", args: state.keywords },
+        { name: "get_careers", args: ["all"] }
+      ];
+    }
   }
 }
 

@@ -118,11 +118,16 @@ export async function aggregateHighSchoolPrograms(
  * Examples:
  * - "Agriculture (Bachelor of Science - Agribusiness)" → "Agriculture"
  * - "Information& Computer Sciences (Associate...)" → "Information & Computer Sciences" (fixes spacing)
+ * - "Comp ElectronicsandNetwork Tech" → "Comp Electronics and Network Tech"
  * - "Computer Science (BS)" → "Computer Science"
  */
 function extractBaseProgramName(fullName: string): string {
-  // STEP 1: Fix common data issues (missing spaces around &)
-  const cleaned = fullName.replace(/(\w)&(\w)/g, '$1 & $2'); // "Information&Computer" → "Information & Computer"
+  // STEP 1: Fix common data issues (missing spaces)
+  const cleaned = fullName
+    .replace(/(\w)&(\w)/g, '$1 & $2')  // "Information&Computer" → "Information & Computer"
+    .replace(/([a-z])and([A-Z])/g, '$1 and $2')  // "ElectronicsandNetwork" → "Electronics and Network"
+    .replace(/sandNetwork/g, 's and Network')  // Fix "Electronicsand" → "Electronics and"
+    .replace(/sandComputer/g, 's and Computer');  // Fix similar patterns
   
   // STEP 2: Remove everything in parentheses
   const baseName = cleaned.replace(/\s*\([^)]*\)/g, "").trim();
