@@ -1,5 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// Onboarding state for structured profile creation
+export interface OnboardingState {
+  isOnboarding: boolean;
+  currentStep: number;
+  answers: {
+    interests: string;
+    skills: string;
+    experiences: string;
+    careerTrack: string;
+  };
+  completed: boolean;
+}
+
 // Message types for chat interface
 export interface Message {
   role: "user" | "assistant";
@@ -67,6 +80,7 @@ export interface ExtractedProfile {
   learningStyle?: string;
   skillsToImprove: string[];
   experienceLevel: string | null;
+  experiences: string[]; // Added: List of specific experiences mentioned
 
   // Context and background
   familyInfluence?: string;

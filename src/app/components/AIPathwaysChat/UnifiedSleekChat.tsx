@@ -114,44 +114,74 @@ const getInitialGreeting = (language: Language | null): string => {
 const getInitialSuggestions = (language: Language | null): string[] => {
   if (!language || language.code === "en") {
     return [
-      "I'm in high school",
-      "Show me UH programs",
-      "What careers can I explore?",
-      "Programs on my island",
+      "💻 Technology & Computer Science",
+      "🏥 Healthcare & Nursing",
+      "💼 Business & Entrepreneurship",
+      "🏗️ Engineering & Construction",
+      "🎨 Arts & Creative Media",
+      "📚 Education & Teaching",
+      "🏨 Hospitality & Tourism",
+      "🔬 Science & Research",
+      "⚖️ Law & Public Service",
+      "🌱 Agriculture & Environment",
     ];
   }
 
   switch (language.code) {
     case "haw":
       return [
-        "He haumāna kula kiʻekiʻe au",
-        "E hōʻike mai i nā papahana UH",
-        "He aha nā ʻoihana?",
-        "Nā papahana ma koʻu mokupuni",
+        "💻 Kamepiula a me ka ʻenehana",
+        "🏥 Mālama olakino a me ka mālama",
+        "💼 ʻOihana pilikino a me ka hoʻokele",
+        "🏗️ Enekinia a me ka hale kūkulu",
+        "🎨 Nā hana noʻeau a me nā media hana",
+        "📚 Hoʻonaʻauao a me ka aʻo ʻana",
+        "🏨 Hoʻokipa a me ka huakaʻi",
+        "🔬 ʻEpekema a me ka noiʻi",
+        "⚖️ Kānāwai a me ka lawelawe lehulehu",
+        "🌱 Mahiʻai a me ka hoʻomaluʻana",
       ];
 
     case "hwp":
       return [
-        "I stay high school",
-        "Show me UH programs",
-        "What kine careers?",
-        "Programs on my island",
+        "💻 Technology & Computer kine",
+        "🏥 Healthcare & Nursing",
+        "💼 Business stuffs",
+        "🏗️ Engineering & Construction",
+        "🎨 Arts & Creative kine",
+        "📚 Teaching & Education",
+        "🏨 Hotel work & Tourism",
+        "🔬 Science & Research",
+        "⚖️ Law & Government work",
+        "🌱 Farming & Environment",
       ];
 
     case "tl":
       return [
-        "Nasa high school ako",
-        "Ipakita ang UH programs",
-        "Anong mga karera?",
-        "Mga programa sa aking isla",
+        "💻 Teknolohiya at Computer Science",
+        "🏥 Pag-aalaga ng Kalusugan at Nursing",
+        "💼 Negosyo at Entrepreneurship",
+        "🏗️ Engineering at Construction",
+        "🎨 Sining at Creative Media",
+        "📚 Edukasyon at Pagtuturo",
+        "🏨 Hospitality at Turismo",
+        "🔬 Agham at Pananaliksik",
+        "⚖️ Batas at Serbisyo Publiko",
+        "🌱 Agrikultura at Kapaligiran",
       ];
 
     default:
       return [
-        "I'm in high school",
-        "Show me UH programs",
-        "What careers can I explore?",
-        "Programs on my island",
+        "💻 Technology & Computer Science",
+        "🏥 Healthcare & Nursing",
+        "💼 Business & Entrepreneurship",
+        "🏗️ Engineering & Construction",
+        "🎨 Arts & Creative Media",
+        "📚 Education & Teaching",
+        "🏨 Hospitality & Tourism",
+        "🔬 Science & Research",
+        "⚖️ Law & Public Service",
+        "🌱 Agriculture & Environment",
       ];
   }
 };
@@ -185,6 +215,11 @@ export default function UnifiedSleekChat({
   const [dataPanelOpen, setDataPanelOpen] = useState(false);
   const [currentData, setCurrentData] = useState<CurrentData | null>(null);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const [nestedOptionsData, setNestedOptionsData] = useState<{
+    hasNestedOptions: boolean;
+    nestedOptionsFor: string | null;
+    nestedOptions: string[];
+  } | null>(null);
   const [activeDataTab, setActiveDataTab] = useState<string>("companies");
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const lastUpdateRef = useRef<number>(0);
@@ -801,6 +836,188 @@ export default function UnifiedSleekChat({
 
       if (data.readyForProfile && !userProfile?.isComplete) {
         console.log("Profile building triggered by profiling-chat API");
+        
+        // Check if we have structured answers from the 5-question flow
+        if (data.structuredAnswers) {
+          console.log("Structured answers received:", data.structuredAnswers);
+          
+          const { interests, skills, educationLevel, experiences, careerTrack } = data.structuredAnswers;
+          
+          // Create transcript from structured answers
+          const transcript = `
+Student: My interests include ${interests}
+Student: I have skills in ${skills}
+Student: My current education level is ${educationLevel}
+Student: My background and experiences: ${experiences}
+Student: I am interested in pursuing a career as ${careerTrack}
+          `.trim();
+
+          const conversationMetrics = {
+            totalMessages: newMessages.length,
+            userMessages: 5,
+            averageLength: 100,
+          };
+
+          // Generate profile using structured data
+          setIsAnalyzing(true);
+          
+          try {
+            // If autoTriggerPathway is true, add a brief transition message
+            if (data.autoTriggerPathway) {
+              console.log("[AutoTrigger] Adding transition message");
+              const transitionMessage: Message = {
+                role: "assistant",
+                content: data.message, // "Let me find the best programs..."
+              };
+              setMessages(prev => [...prev, transitionMessage]);
+            }
+            
+            console.log("[AutoTrigger] Calling generate-profile API");
+            const profileResponse = await fetch("/api/generate-profile", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                transcript,
+                conversationMetrics,
+                language: currentLanguage.code,
+                structuredAnswers: data.structuredAnswers,
+                userMessageCount: 5,
+              }),
+            });
+
+            if (profileResponse.ok) {
+              const profileData = await profileResponse.json();
+              console.log("[AutoTrigger] Profile generated successfully", profileData);
+              
+              if (profileData.profile && profileData.extracted) {
+                const newProfile: UserProfile = {
+                  profileSummary: profileData.profile,
+                  extracted: profileData.extracted,
+                  isComplete: true,
+                  confidence: profileData.confidence,
+                };
+                
+                setUserProfile(newProfile);
+                console.log("[AutoTrigger] Profile saved to state");
+
+                // Get personalized suggestions
+                try {
+                  const suggestionsResponse = await fetch(
+                    "/api/personalized-suggestions",
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        profileSummary: profileData.profile,
+                        extractedProfile: profileData.extracted,
+                        language: currentLanguage.code,
+                      }),
+                    }
+                  );
+
+                  if (suggestionsResponse.ok) {
+                    const suggestionsData = await suggestionsResponse.json();
+                    if (suggestionsData.suggestions) {
+                      setSuggestedQuestions(suggestionsData.suggestions);
+                    }
+                  }
+                } catch (error) {
+                  console.error("Error generating suggestions:", error);
+                }
+
+                // Automatically generate pathway based on profile
+                const pathwayPrompt = `Based on my profile, show me the best educational pathways and career opportunities for ${careerTrack}.`;
+                console.log("[AutoTrigger] Calling pathway API with prompt:", pathwayPrompt);
+                
+                const pathwayResponse = await fetch("/api/pathway", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    message: pathwayPrompt,
+                    conversationHistory: newMessages.map(msg => ({
+                      role: msg.role,
+                      content: msg.content,
+                    })),
+                    language: currentLanguage.code,
+                    userProfile: {
+                      summary: profileData.profile,
+                      extracted: profileData.extracted,
+                    },
+                  }),
+                });
+
+                console.log("[AutoTrigger] Pathway response status:", pathwayResponse.status);
+
+                if (pathwayResponse.ok) {
+                  const pathwayData = await pathwayResponse.json();
+                  console.log("[AutoTrigger] Pathway data received:", pathwayData);
+
+                  if (pathwayData.data && Object.keys(pathwayData.data).length > 0) {
+                    console.log("[AutoTrigger] Setting currentData:", pathwayData.data);
+                    setCurrentData(pathwayData.data);
+
+                    const hasActualData =
+                      (pathwayData.data.highSchoolPrograms &&
+                        pathwayData.data.highSchoolPrograms.length > 0) ||
+                      (pathwayData.data.collegePrograms && 
+                        pathwayData.data.collegePrograms.length > 0) ||
+                      (pathwayData.data.careers && 
+                        pathwayData.data.careers.length > 0) ||
+                      (pathwayData.data.uhPrograms && 
+                        pathwayData.data.uhPrograms.length > 0) ||
+                      (pathwayData.data.doePrograms && 
+                        pathwayData.data.doePrograms.length > 0) ||
+                      (pathwayData.data.pathways && 
+                        pathwayData.data.pathways.length > 0) ||
+                      (pathwayData.data.searchResults &&
+                        ((pathwayData.data.searchResults.uhPrograms &&
+                          pathwayData.data.searchResults.uhPrograms.length > 0) ||
+                          (pathwayData.data.searchResults.doePrograms &&
+                            pathwayData.data.searchResults.doePrograms.length > 0)));
+
+                    console.log("[AutoTrigger] hasActualData:", hasActualData);
+                    
+                    if (hasActualData) {
+                      console.log("[AutoTrigger] Opening data panel");
+                      setDataPanelOpen(true);
+                      setActiveDataTab("companies");
+                    }
+                  }
+
+                  if (pathwayData.suggestedQuestions) {
+                    setSuggestedQuestions(pathwayData.suggestedQuestions);
+                  }
+
+                  const assistantMessage: Message = {
+                    role: "assistant",
+                    content: pathwayData.message,
+                    data: pathwayData.data,
+                    metadata: pathwayData.metadata,
+                  };
+
+                  console.log("[AutoTrigger] Adding pathway result message");
+                  setMessages(prev => [...prev, assistantMessage]);
+                } else {
+                  const errorText = await pathwayResponse.text();
+                  console.error("[AutoTrigger] Pathway API error:", pathwayResponse.status, errorText);
+                }
+              }
+            } else {
+              const errorText = await profileResponse.text();
+              console.error("[AutoTrigger] Profile generation error:", profileResponse.status, errorText);
+            }
+          } catch (error) {
+            console.error("Error generating profile from structured answers:", error);
+          } finally {
+            console.log("[AutoTrigger] Setting isAnalyzing and isLoading to false");
+            setIsAnalyzing(false);
+            setIsLoading(false);
+          }
+          
+          return;
+        }
+        
+        // Fallback to original method if no structured answers
         const transcript = newMessages
           .map(
             msg =>
@@ -874,15 +1091,29 @@ export default function UnifiedSleekChat({
       if (data.suggestedQuestions) {
         setSuggestedQuestions(data.suggestedQuestions);
       }
+      
+      // Handle nested options data (for education level sub-options)
+      if (data.hasNestedOptions && data.nestedOptions) {
+        setNestedOptionsData({
+          hasNestedOptions: data.hasNestedOptions,
+          nestedOptionsFor: data.nestedOptionsFor || null,
+          nestedOptions: data.nestedOptions,
+        });
+      } else {
+        setNestedOptionsData(null);
+      }
 
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: data.message,
-        data: data.data,
-        metadata: data.metadata,
-      };
+      // Don't add assistant message if autoTriggerPathway is true (message already added in structured answers block)
+      if (!data.autoTriggerPathway) {
+        const assistantMessage: Message = {
+          role: "assistant",
+          content: data.message,
+          data: data.data,
+          metadata: data.metadata,
+        };
 
-      setMessages(prev => [...prev, assistantMessage]);
+        setMessages(prev => [...prev, assistantMessage]);
+      }
     } catch (error) {
       console.error("Error:", error);
       const errorMessage = getErrorMessage(currentLanguage);
@@ -950,86 +1181,89 @@ export default function UnifiedSleekChat({
     >
       {/* Navigation Sidebar - z-20, fixed at left: 0 */}
       <NavSidebar
-        isOpen={navSidebarOpen}
-        onToggle={() => setNavSidebarOpen(!navSidebarOpen)}
-        currentLanguage={currentLanguage}
-        onDataPanelToggle={() => {
-          const newPanelState = !dataPanelOpen;
-          setDataPanelOpen(newPanelState);
-          if (newPanelState) {
-            setActiveDataTab("companies");
-          }
-        }}
-        dataPanelOpen={dataPanelOpen}
-        hasDataToShow={hasDataToShow()}
-        onProfileClick={() => setSidebarOpen(!sidebarOpen)}
-        onNewChat={createNewChat}
-        chatSessions={chatSessions}
-        currentChatId={currentChatId}
-        onSwitchChat={switchToChat}
-        onDeleteChat={deleteChat}
-      />
+            isOpen={navSidebarOpen}
+            onToggle={() => setNavSidebarOpen(!navSidebarOpen)}
+            currentLanguage={currentLanguage}
+            onDataPanelToggle={() => {
+              const newPanelState = !dataPanelOpen;
+              setDataPanelOpen(newPanelState);
+              if (newPanelState) {
+                setActiveDataTab("companies");
+              }
+            }}
+            dataPanelOpen={dataPanelOpen}
+            hasDataToShow={hasDataToShow()}
+            onProfileClick={() => setSidebarOpen(!sidebarOpen)}
+            onNewChat={createNewChat}
+            chatSessions={chatSessions}
+            currentChatId={currentChatId}
+            onSwitchChat={switchToChat}
+            onDeleteChat={deleteChat}
+          />
 
-      {/* Profile Sidebar - z-30, fixed at left: 0, overlays NavSidebar */}
-      {sidebarOpen && (
-        <LeftSidebar
-          sidebarOpen={sidebarOpen}
-          userProfile={userProfile}
-          onClose={() => setSidebarOpen(false)}
-          userMessageCount={getUserMessageCount()}
-        />
-      )}
-
-      {/* Main Content Area - ONLY shifts based on NavSidebar width */}
-      <div
-        className="flex flex-col h-screen transition-all duration-300"
-        style={{
-          left: `${getLeftOffset()}px`,
-        }}
-      >
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 flex flex-col">
-            <ChatMessages
-              messages={messages}
-              isLoading={isLoading}
-              isAnalyzing={isAnalyzing || isUpdatingProfile}
-              suggestedQuestions={suggestedQuestions}
-              setSuggestedQuestions={setSuggestedQuestions}
-              setMessage={setMessage}
-              userProfile={userProfile}
+          {/* Profile Sidebar - z-30, fixed at left: 0, overlays NavSidebar */}
+          {sidebarOpen && (
+            <LeftSidebar
               sidebarOpen={sidebarOpen}
+              userProfile={userProfile}
+              onClose={() => setSidebarOpen(false)}
+              userMessageCount={getUserMessageCount()}
+            />
+          )}
+
+          {/* Main Content Area - ONLY shifts based on NavSidebar width */}
+          <div
+            className="flex flex-col h-screen transition-all duration-300"
+            style={{
+              left: `${getLeftOffset()}px`,
+            }}
+          >
+            <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 flex flex-col">
+                <ChatMessages
+                  messages={messages}
+                  isLoading={isLoading}
+                  isAnalyzing={isAnalyzing || isUpdatingProfile}
+                  suggestedQuestions={suggestedQuestions}
+                  setSuggestedQuestions={setSuggestedQuestions}
+                  setMessage={setMessage}
+                  userProfile={userProfile}
+                  sidebarOpen={sidebarOpen}
+                  dataPanelOpen={dataPanelOpen}
+                  setSidebarOpen={setSidebarOpen}
+                  navSidebarOpen={navSidebarOpen}
+                  currentLanguage={currentLanguage}
+                  nestedOptionsData={nestedOptionsData || undefined}
+                />
+              </div>
+            </div>
+
+            <ChatInput
+              message={message}
+              setMessage={setMessage}
+              handleSend={handleSend}
+              isLoading={isLoading}
+              userProfile={userProfile}
+              messagesLength={messages.length}
               dataPanelOpen={dataPanelOpen}
-              setSidebarOpen={setSidebarOpen}
+              sidebarOpen={sidebarOpen}
               navSidebarOpen={navSidebarOpen}
-              currentLanguage={currentLanguage}
+              userMessageCount={getUserMessageCount()}
             />
           </div>
-        </div>
 
-        <ChatInput
-          message={message}
-          setMessage={setMessage}
-          handleSend={handleSend}
-          isLoading={isLoading}
-          userProfile={userProfile}
-          messagesLength={messages.length}
+      {/* Data Panel - z-10, FIXED at right: 0 */}
+      {dataPanelOpen && hasDataToShow() && (
+        <DataPanel
           dataPanelOpen={dataPanelOpen}
-          sidebarOpen={sidebarOpen}
-          navSidebarOpen={navSidebarOpen}
-          userMessageCount={getUserMessageCount()}
+          setDataPanelOpen={setDataPanelOpen}
+          socCodes={displayedSocCodes}
+          activeDataTab={activeDataTab}
+          setActiveDataTab={setActiveDataTab}
+          messages={messages}
+          userProfile={userProfile}
         />
-      </div>
-
-      {/* Data Panel - positioned as overlay */}
-      <DataPanel
-        dataPanelOpen={dataPanelOpen}
-        setDataPanelOpen={setDataPanelOpen}
-        socCodes={displayedSocCodes} // ✅ Pass extracted SOC codes from displayed careers
-        activeDataTab={activeDataTab}
-        setActiveDataTab={setActiveDataTab}
-        messages={messages} // ✅ Pass conversation context
-        userProfile={userProfile} // ✅ Pass user profile
-      />
+      )}
     </div>
   );
 }

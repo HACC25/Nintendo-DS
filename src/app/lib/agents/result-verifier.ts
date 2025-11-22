@@ -122,10 +122,10 @@ export class ResultVerifier {
       verifiedPrograms.push(...batchResults);
     }
 
-    // SMART FILTERING: If we have high-scoring programs (8+), use stricter threshold
-    // This prevents "Information Systems" from showing when user asks for "Computer Science"
+    // SMART FILTERING: Lower threshold to ensure highly relevant programs aren't filtered out
+    // For Software Engineer -> Computer Science, we want to keep programs scoring 6+
     const hasStrongMatches = verifiedPrograms.some(p => p.relevanceScore >= 8);
-    const threshold = hasStrongMatches ? 7 : 5; // Stricter when we have clear winners
+    const threshold = hasStrongMatches ? 6 : 5; // More inclusive threshold
     
     const filtered = verifiedPrograms
       .filter(p => p.relevanceScore >= threshold)
@@ -185,15 +185,39 @@ Important principles:
 
 PROFILE-BASED SCORING BOOST:
 - If a program aligns with the user's stated interests → +1 to score
-- If a program aligns with the user's stated goals → +1 to score
+- If a program aligns with the user's stated goals/desired career → +2 to score (HIGHEST PRIORITY)
+- If a program is clearly unrelated to the user's career goals → -2 to score
 - Maximum base score is still 10, but profile alignment can help borderline programs
 
+CAREER GOAL MATCHING (CRITICAL):
+- If the user has a stated career goal (e.g., "Software Engineer", "Nurse", "Chef"), programs MUST be relevant to that career path
+- **PRIMARY PROGRAMS**: For Software Engineer → Computer Science, Information & Computer Sciences are the PRIMARY programs (score 9-10)
+- **SUPPORTING PROGRAMS**: Information Technology, Computer Engineering support Software Engineer goals (score 7-8)
+- **TANGENTIAL PROGRAMS**: Electronics, Network Tech may provide some skills but are not primary pathways (score 4-6)
+- **NOT RELEVANT**: Generic "Applied Science" without computer/software focus → Score 2-4
+
+Specific Software Engineer Scoring Examples (USE THESE AS REFERENCE):
+- "Computer Science" for Software Engineer → Score 9-10 (PRIMARY - exact match)
+- "Information and Computer Sciences" for Software Engineer → Score 9-10 (PRIMARY - exact match)
+- "Information Technology" for Software Engineer → Score 7-8 (SUPPORTING - directly related)
+- "Computer Engineering" for Software Engineer → Score 7-8 (SUPPORTING - hardware + software)
+- "Comp Electronics and Network Tech" for Software Engineer → Score 4-5 (TANGENTIAL - mostly hardware/networking, some programming)
+- "Engineering Tech" for Software Engineer → Score 4-5 (TANGENTIAL - general engineering, not software-focused)
+- "Applied Science" (generic) for Software Engineer → Score 2-4 (NOT RELEVANT - too broad, no software focus)
+- "Electronics Technology" for Software Engineer → Score 3-4 (NOT RELEVANT - hardware focus, minimal software)
+
+Other Career Examples:
+- "Chef" goal → Culinary Arts scores 9-10, Business Technology scores 4-5 (only if hospitality-related)
+- "Nurse" goal → Nursing scores 9-10, Biology scores 6-7 (supporting), Applied Science scores 2-4 (not specific enough)
+
+DO NOT recommend programs in completely different fields unless they explicitly support the career goal.
+
 Scoring guidelines:
-- Same subject, same level as query → Score 9-10 (e.g., HS engineering when asking about HS engineering)
-- Same subject, different level → Score 7-8 (e.g., college engineering when asking about HS engineering)
-- Related subject, any level → Score 6-7 (e.g., computer engineering when asking about computer science)
-- Tangentially related → Score 4-5 (e.g., mathematics when asking about engineering)
-- Unrelated subject → Score 0-3 (e.g., culinary arts when asking about engineering)
+- Primary career program match (e.g., Computer Science for Software Engineer) → Score 9-10
+- Supporting career program (e.g., Information Technology for Software Engineer) → Score 7-8
+- Same subject, different level, aligns with career goal → Score 7-8 (e.g., HS comp sci when goal is college-level SE)
+- Tangentially related, weak support for career goal → Score 4-6 (e.g., Electronics Technology for Software Engineer)
+- Unrelated or too generic to career goal → Score 0-3 (e.g., Applied Science without focus, Automotive Technology for Software Engineer goal)
 
 Examples of using conversation context:
 - Conversation History shows: "User: Show me computer science pathways"
@@ -256,7 +280,7 @@ IMPORTANT:
           { role: "user", content: userPrompt },
         ],
         model: "llama-3.3-70b-versatile",
-        temperature: 0.1,
+        temperature: 0, // Set to 0 for completely deterministic results
       });
 
       const content = response.choices[0].message.content || "[]";
@@ -325,6 +349,16 @@ IMPORTANT:
             reasoning: scoreData.reasoning || "No reasoning provided",
           });
         }
+      }
+
+      // Log scores for debugging (always show for college programs)
+      if (programType === "college") {
+        console.log("[ResultVerifier] Program scores:");
+        rankedPrograms
+          .sort((a, b) => b.relevanceScore - a.relevanceScore)
+          .forEach(p => {
+            console.log(`  ${p.relevanceScore}/10: ${p.program} - ${p.reasoning}`);
+          });
       }
 
       return rankedPrograms;
